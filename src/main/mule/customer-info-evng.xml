@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+    <http:listener-config name="customer-info-evng-httpListenerConfig">
+        <http:listener-connection host="${http.host}" port="${http.port}" />
+    </http:listener-config>
+    <apikit:config name="customer-info-evng-config" api="resource::d39d2794-0f2a-48ee-9f87-e53492958294:customer-info-evng:1.0.0:raml:zip:customer-info-evng.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="b090f5a0-d61d-4951-87b6-278becd65adf" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="9674fe9e-1042-41ac-b0a2-1d58ed4a068c" file="${env}.properties" />
+	<file:config name="File_Config" doc:name="File Config" doc:id="ded8871c-b0fa-4532-9f61-292f8e34c00a" />
+	<configuration doc:name="Configuration" doc:id="c97a4ca9-03a2-44b1-a39d-040c0d0acc46" defaultErrorHandler-ref="global-error-handlingError_Handler" />
+	<validation:config name="Validation_Config" doc:name="Validation Config" doc:id="2961ec04-8a37-4d60-91e2-90cafc08af6e" />
+	<api-gateway:autodiscovery apiId="17045290" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="28959a62-28cf-4b0f-adb6-944f499d9732" flowRef="customer-info-evng-main" />
+	<flow name="customer-info-evng-main">
+        <http:listener config-ref="customer-info-evng-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]" reasonPhrase='#[vars.httpReason default "Server Error"]'>
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="customer-info-evng-config" />
+    </flow>
+    <flow name="delete:\deleteCustomer\(telephoneNo):customer-info-evng-config">
+		<db:delete doc:name="Delete" doc:id="28038885-2160-4a79-8056-bd7fd8480c15" config-ref="Database_Config">
+			<db:sql ><![CDATA[${db.delete.query}]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id : attributes.queryParams.customerId,
+	telephone : attributes.uriParams.telephoneNo
+}]]]></db:input-parameters>
+		</db:delete>
+		<set-payload value='#[%dw 2.0
+output application/json
+---
+{
+                  "Message" : "Customer account removed/deleted. Sorry to see you going out of our services. Please give feedback..."
+                }]' doc:name="Set Payload" doc:id="588dd1f5-c973-404b-b826-03c2b9f24969" />
+    </flow>
+    <flow name="patch:\updateTelephoneNum:application\json:customer-info-evng-config">
+        <db:update doc:name="Update" doc:id="7da14f4e-b4ff-4e86-af25-c3dddcf5129f" config-ref="Database_Config">
+			<db:sql ><![CDATA[${db.query.update}]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	telephone : payload.telephone,
+	id : payload.id
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  Environment : p('environment'),
+  Message: "Mobile number updated success"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\getAllCustomers:customer-info-evng-config">
+		<db:select doc:name="Select" doc:id="d4d35f7b-9342-4746-92a5-b739822712d9" config-ref="Database_Config">
+			<db:sql ><![CDATA[${db.query.getall}]]></db:sql>
+		</db:select>
+		<logger level="INFO" doc:name="Logger" doc:id="a5ede4b4-754e-4e7a-bbea-06f97cf3d415" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="9d319f53-4f64-4213-a6a1-d7e525203b1c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="get:\getCustomerById:customer-info-evng-config">
+		<db:select doc:name="Select" doc:id="5d682bdf-0a17-45e1-9e64-bd6ad056ef22" config-ref="Database_Config">
+			<db:sql ><![CDATA[${db.query.getbyid}]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id : attributes.queryParams.customerId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="18815879-193b-47e4-9efc-3dc6b8ff5b0c" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<ee:transform doc:name="Transform Message" doc:id="00ffb6c6-8dca-45d6-b121-7663cc87ae1f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="1cc25b57-fc68-4cfe-b5b9-9dabb9c67d47" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message" : "For the given customerId there is no customer exists, please try with correct customerId"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="post:\createCustomer:application\json:customer-info-evng-config">
+		<validation:is-not-null doc:name="Is not null" doc:id="d4cf5e2a-4b7c-4c4f-91c0-1f62413cb54c" config-ref="Validation_Config" value="#[payload]" message="Error"/>
+		<logger level="INFO" doc:name="Logger" doc:id="19a70541-e20a-40b3-bd40-ed745ca31262" message="Request sending to Scatter gather"/>
+		<db:insert doc:name="Insert" doc:id="7e993469-fb33-4345-ba7e-907581e501f4" config-ref="Database_Config">
+			<db:sql><![CDATA[${db.query.insert}]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	cusName : payload.name,
+	cusemail : payload.email,
+	cusaddress : payload.address,
+	custelephone : payload.telephone
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="85586c72-3ab5-4bb1-9a67-12ca86cdc74a">
+					<ee:message>
+						<ee:set-payload><![CDATA["Customer details successfully inserted"]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+    </flow>
+</mule>

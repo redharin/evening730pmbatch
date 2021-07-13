@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<error-handler name="global-error-handlingError_Handler" doc:id="85804f72-2ef4-4cc5-a909-b8f5b28d0bc4" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="769a0109-e9d4-4f2e-b572-32a79c572375" type="DB:CONNECTIVITY">
+			<ee:transform doc:name="Copy_of_Transform Message" doc:id="60399edc-edb3-4a35-9186-965af751854f" >
+				<ee:message >
+					<ee:set-payload ><![CDATA["There is a connectivity issue from database, please try again later"]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[503]]></ee:set-variable>
+					<ee:set-variable variableName="httpReason" ><![CDATA["Database Error"]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7faf6f08-5e14-46ce-b0bd-bc9ef7e7a08d" type="DB:BAD_SQL_SYNTAX">
+			<ee:transform doc:name="Copy_of_Transform Message" doc:id="888e35b7-6f0f-4459-8e31-76fd82ac891a" >
+				<ee:message >
+					<ee:set-payload ><![CDATA["There is a syntax error, please check the query and try again"]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="034f2e12-4fb9-4db2-9a10-4eba5e28af2a" type="VALIDATION:NULL">
+			<ee:transform doc:name="Transform Message" doc:id="9badfa64-67e0-4d36-b27e-e7681d78e994" >
+				<ee:message >
+					<ee:set-payload ><![CDATA["There is an validation error occured. Try to verify the data and try again"]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="21c15cac-a306-427e-8605-13ceea27850b" type="ANY">
+			<ee:transform doc:name="Copy_of_Transform Message" doc:id="7e1da654-038b-448d-891a-215ec03448a9" >
+				<ee:message >
+					<ee:set-payload ><![CDATA["There is an error occured"]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+	</error-handler>
+</mule>
