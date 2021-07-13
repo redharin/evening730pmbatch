@@ -37,6 +37,22 @@
                         </sharedLibrary>
                     </sharedLibraries>
                 <classifier>mule-application</classifier>
+                
+                <cloudHubDeployment>
+				      <uri>https://anypoint.mulesoft.com</uri>
+				      <muleVersion>4.3.0</muleVersion>
+				      <username>redharinjuly21</username>
+				      <password></password>
+				      <applicationName>customer-info-eveng</applicationName>
+				      <environment>Sandbox</environment>				      
+				      <workers>1</workers>
+				      <workerType>Micro</workerType>
+				      <objectStoreV2>true</objectStoreV2>
+				      <properties>
+				        <key>value</key>
+				      </properties>
+				 </cloudHubDeployment>
+                
                 </configuration>
 			</plugin>
 		</plugins>
